@@ -30,10 +30,25 @@ Veles is a personal second-brain RAG system. It's an MCP server (TypeScript) tha
 - `npm run dev` — dev mode with tsx watch
 - `npm test` — run tests
 - `npm run setup` — first-time infrastructure setup
+- `npm run reembed` — re-embed all chunks with current model (resumable)
+- `npm run backup -- --output=<dir>` — APOC backup to JSON
+- `npm run restore -- --input=<file>` — APOC restore from JSON
 
 ## Import Conventions
 - Use `.js` extensions in imports (ESM requirement)
 - Import from `../core/neo4j.js`, `../models/resource.js`, etc.
+
+## Backup/Restore
+- `src/mcp/tools/backup.ts` — APOC full graph export (MCP tool)
+- `src/mcp/tools/restore.ts` — APOC full graph import with index recreation (MCP tool)
+- `scripts/backup.ts` — CLI backup with Docker cp
+- `scripts/restore.ts` — CLI restore with Docker cp
+- `scripts/reembed.ts` — Resumable embedding migration
+
+## Ticket Patterns
+- Tags matching `[A-Z]+-\d+` (e.g., PROJ-1234) are highlighted in output
+- `src/utils/tickets.ts` — detection and formatting utilities
+- Ticket detection runs on add/edit to suggest untagged ticket references
 
 ## Adding New Tools
 1. Create `src/mcp/tools/<name>.ts`

@@ -11,6 +11,9 @@ Veles is an MCP (Model Context Protocol) server that gives Claude Code direct ac
 - **Multi-brain support** — separate namespaces for work, personal, projects
 - **Tagging system** — hierarchical tags with parent/child relationships
 - **Bulk import/export** — ingest entire directories, export as markdown or JSON
+- **Backup & restore** — full database backup/restore via APOC for machine migration
+- **Ticket tagging** — auto-detects ticket patterns (PROJ-1234) and highlights them
+- **Embedding migration** — resumable script for switching embedding models
 - **Local-first** — everything runs on your machine, no cloud dependency
 - **Mobile access** — dispatch tasks from phone via Claude Dispatch (requires Max subscription)
 
@@ -25,7 +28,9 @@ npm run setup          # starts Docker services, pulls embedding model, creates 
 npm run build
 ```
 
-Then add to your Claude Code config (`~/.claude/settings.json`):
+Then add to your Claude Code config.
+
+**For use in all projects** (`~/.claude.json` — user-level, works everywhere):
 
 ```json
 {
@@ -42,6 +47,9 @@ Then add to your Claude Code config (`~/.claude/settings.json`):
 }
 ```
 
+**For use in a specific project only** (`.mcp.json` in that project's root):
+Same format — committed to git so team members get it automatically.
+
 ## Architecture
 
 ```
@@ -51,7 +59,7 @@ Then add to your Claude Code config (`~/.claude/settings.json`):
 ├─────────────────────────────────────────────────────────────┤
 │                    Veles MCP Server (TS)                      │
 │  Tools: add | search | list | get | edit | remove | tag      │
-│         relate | import | export | stats                     │
+│         relate | import | export | stats | backup | restore  │
 ├──────────┬────────────────────────────────┬─────────────────┤
 │ Ingestion│      Retrieval Pipeline        │   Tag Manager   │
 │ Pipeline │   (Vector+Keyword+Graph)       │                 │
@@ -298,6 +306,25 @@ Parameters:
 ### `veles_stats`
 Knowledge base overview (no parameters).
 
+### `veles_backup`
+Export full database as JSON backup (via APOC).
+
+```
+Parameters:
+  output_file  - Filename for backup (stored in Neo4j import dir, required)
+  brain?       - Brain namespace (default: "default")
+```
+
+### `veles_restore`
+Restore database from a JSON backup file.
+
+```
+Parameters:
+  input_file       - Backup filename in Neo4j import dir (required)
+  confirm_overwrite - Must be true (deletes existing data first, required)
+  brain?            - Brain namespace (default: "default")
+```
+
 ## Multi-Brain Support
 
 Veles supports separate "brains" — each brain runs its own Neo4j instance for complete data isolation.
@@ -412,7 +439,7 @@ veles/
 │   ├── config.ts             # Environment configuration
 │   ├── mcp/
 │   │   ├── server.ts         # MCP server setup, tool registration
-│   │   └── tools/            # One file per MCP tool (11 tools)
+│   │   └── tools/            # One file per MCP tool (13 tools)
 │   ├── core/
 │   │   ├── neo4j.ts          # Neo4j driver, indexes, connectivity
 │   │   ├── embeddings.ts     # Ollama embedding wrapper
@@ -424,15 +451,72 @@ veles/
 │   │   └── tag.ts            # Tag CRUD + hierarchy
 │   └── utils/
 │       ├── markdown.ts       # Title/frontmatter extraction
-│       └── files.ts          # File system utilities
+│       ├── files.ts          # File system utilities
+│       └── tickets.ts        # Ticket pattern detection
 ├── tests/                    # Vitest test files
 ├── scripts/
 │   ├── setup.sh              # First-time setup script
-│   └── seed.ts               # Optional seed data
+│   ├── seed.ts               # Optional seed data
+│   ├── reembed.ts            # Embedding model migration
+│   ├── backup.ts             # CLI database backup
+│   └── restore.ts            # CLI database restore
 ├── docker-compose.yml        # Neo4j + Ollama containers
 ├── .env.example              # Configuration template
 └── package.json
 ```
+
+## Backup & Restore
+
+### Via MCP Tools (from Claude Code)
+```
+"Back up my knowledge base" → veles_backup
+"Restore from backup" → veles_restore
+```
+
+### Via CLI
+```bash
+# Backup
+npm run backup -- --output=~/backups
+
+# Restore on another machine
+npm run restore -- --input=~/backups/veles-backup-2026-03-20T10-30-00.json
+```
+
+### Migration to Another Machine
+1. On source: `npm run backup -- --output=~/Desktop`
+2. Copy the JSON file to the target machine
+3. On target: clone repo, `npm install && npm run setup`
+4. On target: `npm run restore -- --input=/path/to/backup.json`
+
+Backup includes all nodes, relationships, and embedding vectors. Indexes are automatically recreated on restore.
+
+## Embedding Model Migration
+
+When switching embedding models (e.g., `nomic-embed-text` to `mxbai-embed-large`):
+
+```bash
+# 1. Update .env with new model name and dimensions
+# 2. Run the migration script
+npm run reembed
+
+# For a specific brain
+npm run reembed -- --brain=work
+```
+
+The script is resumable — if interrupted, re-run and it picks up where it left off.
+
+## Ticket Tagging
+
+Associate resources with tickets from any system (Jira, Linear, GitHub Issues) using regular tags:
+
+```
+"Add this doc, tag it PROJ-1234" → tagged with proj-1234
+"What do I have for BUG-42?" → searches for resources tagged bug-42
+```
+
+Ticket-pattern tags (like `PROJ-1234`) are automatically highlighted in search/list output with brackets: `[PROJ-1234]`.
+
+When adding or editing resources, Veles detects ticket patterns in your content and suggests them as tags if not already applied.
 
 ## Troubleshooting
 
@@ -459,7 +543,6 @@ veles/
 ## Future Roadmap
 
 - [ ] React web UI for browsing and managing knowledge
-- [ ] Jira/ticketing system integration
 - [ ] Image content extraction and embedding
 - [ ] Auto-tagging via LLM analysis
 - [ ] Multi-user support with authentication
