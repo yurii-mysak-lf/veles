@@ -78,7 +78,8 @@ export async function ingestResource(
           content: $content,
           embedding: $embedding,
           position: $position,
-          resource_id: $resourceId
+          resource_id: $resourceId,
+          embedding_model: $embeddingModel
         })
         CREATE (r)-[:HAS_CHUNK]->(c)
         `,
@@ -88,6 +89,7 @@ export async function ingestResource(
           content: chunks[i],
           embedding: embeddings[i],
           position: i,
+          embeddingModel: config.ollama.model,
         },
       );
     }

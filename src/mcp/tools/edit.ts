@@ -81,7 +81,8 @@ export function registerEditTool(server: McpServer) {
                 content: $content,
                 embedding: $embedding,
                 position: $position,
-                resource_id: $resourceId
+                resource_id: $resourceId,
+                embedding_model: $embeddingModel
               })
               CREATE (r)-[:HAS_CHUNK]->(c)
               `,
@@ -91,6 +92,7 @@ export function registerEditTool(server: McpServer) {
                 content: chunks[i],
                 embedding: embeddings[i],
                 position: i,
+                embeddingModel: config.ollama.model,
               },
             );
           }
