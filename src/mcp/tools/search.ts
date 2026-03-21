@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { hybridSearch } from "../../core/retrieval.js";
+import { formatTagsWithTickets } from "../../utils/tickets.js";
 
 export function registerSearchTool(server: McpServer) {
   server.tool(
@@ -54,7 +55,7 @@ export function registerSearchTool(server: McpServer) {
             `   ID: ${r.resourceId}`,
             `   Score: ${r.score.toFixed(4)}`,
             `   Match: ${r.matchType}`,
-            `   Tags: ${r.tags.length > 0 ? r.tags.join(", ") : "(none)"}`,
+            `   Tags: ${formatTagsWithTickets(r.tags)}`,
             `   ${truncatedContent}`,
           ].join("\n");
         })

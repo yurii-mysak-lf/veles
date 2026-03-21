@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { listResources } from "../../models/resource.js";
+import { formatTagsWithTickets } from "../../utils/tickets.js";
 
 export function registerListTool(server: McpServer) {
   server.tool(
@@ -58,7 +59,7 @@ export function registerListTool(server: McpServer) {
             `- ${r.title}`,
             `  ID: ${r.id}`,
             `  Type: ${r.type}`,
-            `  Tags: ${r.tags.length > 0 ? r.tags.join(", ") : "(none)"}`,
+            `  Tags: ${formatTagsWithTickets(r.tags)}`,
             `  Date: ${date}`,
           ].join("\n");
         })
